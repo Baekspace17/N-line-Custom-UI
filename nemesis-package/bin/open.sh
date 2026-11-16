@@ -1,0 +1,7 @@
+#!/system/bin/sh
+# NEMESIS Manager > Packages > Launch (and `nemesis pkg-launch nlinecustomui`):
+# open the same component the star hold opens.
+. /data/nemesis/apps/nlinecustomui/scripts/common.sh
+TARGET_COMPONENT=com.baekspace.nline/.MainActivity
+[ -r "$HERE/longstar.conf" ] && . "$HERE/longstar.conf"
+am start -n "$TARGET_COMPONENT" -f 0x10000000

@@ -1,0 +1,16 @@
+[nemesis]
+version=1.1
+id=nlinecustomui
+name=N-line Custom UI
+type=application
+package-version=0.4.0
+short-desc=CN7 custom tiles with N-line Custom UI Wi-Fi Client and ADB
+detailed-desc=Independent Wi-Fi client setup, Wi-Fi status, ADB and customizable shortcuts. Does not replace N-line Custom UI.
+os=any
+models=any
+postinstall=scripts/postinstall.sh
+
+[app.0]
+kind=sh
+path=bin/open.sh
+uid=root
