@@ -10,45 +10,46 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Java 21
+      - name: Java 21 (same as Tilepad release)
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
 
-      # GitHub ubuntu-latest already provides Android SDK command-line tools.
-      # Do not call android-actions/setup-android@v3: its legacy 'tools'
-      # installation request fails on current SDK repositories.
-      - name: Install required Android SDK packages
+      - name: Android SDK (Tilepad release approach)
         shell: bash
         run: |
           set -euo pipefail
-          echo "ANDROID_HOME=${ANDROID_HOME:-}"
-          command -v sdkmanager
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0' 'platform-tools'
+          SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          SDKMANAGER="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            echo "::error::sdkmanager missing at $SDKMANAGER; inspect runner image/SDK configuration"
+            find "$SDK_ROOT" -maxdepth 5 -name sdkmanager -type f -print || true
+            exit 1
+          fi
+          # Pipe 'yes' without pipefail to avoid SIGPIPE (141) on successful sdkmanager exit.
+          yes | "$SDKMANAGER" --sdk_root="$SDK_ROOT" --licenses >/dev/null || true
+          "$SDKMANAGER" --sdk_root="$SDK_ROOT" --install 'build-tools;36.0.0' 'platforms;android-36'
+          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
 
-      - name: Build APK
-        shell: bash
+      - name: Build debug APK
         run: |
-          chmod +x gradlew
+          chmod +x ./gradlew
           ./gradlew :app:assembleDebug --no-daemon --stacktrace
 
-      - name: Package NEMESIS
-        shell: bash
+      - name: Build NEMESIS USB ZIP
         run: python3 tools/build_nline_package.py
 
-      - name: Upload build outputs
-        if: success()
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: N-line-Custom-UI
+          if-no-files-found: error
           path: |
             app/build/outputs/apk/debug/app-debug.apk
             dist/nlinecustomui.zip
-          if-no-files-found: error
